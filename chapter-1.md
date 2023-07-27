@@ -15,7 +15,15 @@
 4. Use the default options, except for choosing MongoDb as a database, as well as entering the database connection string.
 5. The Feathers CLI will generate a new app for us to use!
 
+While you don't actualy need to run the server for this exercise, the command for that is:
 
+`npm run dev`
+
+or
+
+`npm run compile`
+
+`npm run start`
 
 ### Generating a service
 
