@@ -268,10 +268,16 @@ const postData2 = {  name: null }
 const postData3 = {  name: undefined }
 ```
 
-The first two data would actually create a `name` field on the resulting database entry, one with an empty string `""`, and one with `null`. However, the third data would create an empty object, without the `name` field. However, querying with `{ query: { name: null } }` but in Mongo, it would return the 2nd and 3rd records. If we were to query using `{ query: { name: { $exists: true } } }`, it would return the 1st and 2nd record. 
+The first two data would actually create a `name` field on the resulting database entry, one with an empty string `""`, and one with `null`. However, the third data would create an empty object, without the `name` field. 
+
+In this scenerio, querying with `{ name: null }`  would return the 2nd and 3rd records. 
+
+If we were to query using `{ name: { $exists: true } }`, it would return the 1st and 2nd records. 
+
+For the query `{ name: "" }`, it would only return the 1st record.
+
+If these were records amidst other properly-populated records, and we wanted to get all non-empty, non-null, and non-undefined records, we would have to use the query: `{ name: { $exists: true, $ne: '' } }`
 
 This section is less of an instruction and more of a warning: **Great care must be taken in how empty strings, arrays, null values, and non-existant fields are queries.** 
-
-
 
 > A very common query i find useful is for when I'm trying to find an optional boolean value that is "false". In the event that there exists records withou the field, a query `{ field: false }` will not return those records without any `field` field. I usually use the query `{ field: { $ne: true } }` to represent "false" in this context.
