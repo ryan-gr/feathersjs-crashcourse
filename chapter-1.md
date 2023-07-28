@@ -41,7 +41,7 @@ Which schema definition format do you want to use? TypeBox
 
 
 
-### The Schema File
+### Schemas
 
 When creating an API endpoint, we typically have to ask ourselves some questions:
 
@@ -167,3 +167,111 @@ We want to add at what time the `student` object was created. Add a `createdAt` 
 ### Bonus Action (2)
 
 After creating a few `student` entries, try returning them as a list of students (either through the test file above, or postman). Try to return a list that is sorted by `name`, or by `createdAt`, using filters described [here](https://feathersjs.com/api/databases/querying.html). Explore how to limit the number of entries returned, as well as the number of entries skipped.
+
+
+
+### Query Schemas
+
+The Query Schema actually looks quite different from the other schemas, so let's take some time to look at it specifically.
+
+```ts
+export const studentQueryProperties = Type.Pick(studentSchema, ['_id', 'name', 'gender', 'createdAt', 'age'])
+export const studentQuerySchema = Type.Intersect(
+  [
+    querySyntax(studentQueryProperties),
+    // Add additional query properties here
+    Type.Object({}, { additionalProperties: false })
+  ],
+  { additionalProperties: false }
+)
+```
+
+On the first line, we see something familiar - we `Pick` some fields defined in the `studentSchema`, the main model of the service.
+
+On the fourth line, we are introduced to `querySyntax`. This function basically "expands" the given fields to also accept common operators for [querying](https://feathersjs.com/api/databases/querying.html), such as `$lt`, `$lte`, `$gt`, `$gte`, `$ne`, `$in` and `$nin`.
+
+For example, even though we defined `age` as a `Type.Number`, when using `age` in a search query, we are not limited to just using: `{ query: { age: 5} }`, but we could use `{ query: { age: { $gte: 5 } } }`, or even `{ query: { age: { $in: [1,5, 10] } } }`. 
+
+In the event that you would want to defined custom, additional fields to a queried field, you could do the following:
+
+```ts
+export const studentQueryProperties = Type.Pick(studentSchema, ['_id', 'name', 'gender', 'createdAt', 'age'])
+export const studentQuerySchema = Type.Intersect(
+  [
+    querySyntax(studentQueryProperties, {
+      name: { $regex: Type.String() }
+    }),
+    // Add additional query properties here
+    Type.Object({}, { additionalProperties: false })
+  ],
+  { additionalProperties: false }
+)
+```
+
+The above would allow us to query name like so: `{ query: { name: { $regex: 'ryan', } } }`, as well as the other ways to query a string that were already available to us (which includes the common operations mentioned above). Note that some operators can only be used for certain types of data though.
+
+If you still require more flexibility, you could define totally new query paramters as well, such as:
+
+```ts
+export const studentQueryProperties = Type.Pick(studentSchema, ['_id', 'name', 'gender', 'createdAt', 'age'])
+export const studentQuerySchema = Type.Intersect(
+  [
+    querySyntax(studentQueryProperties, {
+      name: { $regex: Type.String() }
+    }),
+    // Add additional query properties here
+    Type.Object({
+      isTeenager: Type.Optional(Type.Boolean())
+    }, { additionalProperties: false })
+  ],
+  { additionalProperties: false }
+)
+```
+
+Note that most of the time when doing this, we don't actually want the query param to be converted to the actual query to be run on the database. For example, there is no `isTeener` field on the database that it can check against. What we could do is that override the or add  an `age` query, without actually passing the query from the client. This will be disussed in the next section regarding **Resolvers** (this could also be done with **Hooks**, again, a topic for another day).
+
+> Not handling additional query properties properly could cause weird issues down the line. For example, if we don't remove the `isTeenager` query param somewhere down the line (either in a resolver or hook), the database would probably be giving you empty results, since none of your data actually has a `isTeenager` field.
+
+
+
+##### Nested Field Querying (MongoDB Specific)
+
+For nested data (especially important for NoSQL databases), we typically access them using dot notation. For example, `bankDetails.accountNumber`. However, if you try to do that with the default schemas, Feathers will expect you to provide an entire object of `bankDetails` in the query for comparison. 
+
+In order to search for nested fields, we have to declare `bankDetails.accountNumber` as an additional query property, as shown below:
+
+```ts
+export const studentQueryProperties = Type.Pick(studentSchema, ['_id', 'name', 'gender', 'createdAt', 'age'])
+export const studentQuerySchema = Type.Intersect(
+  [
+    querySyntax(studentQueryProperties),
+    // Add additional query properties here
+    Type.Object({
+      'bankDetails.accountNumber': Type.Optional(Type.String())
+    }, { additionalProperties: false })
+  ],
+  { additionalProperties: false }
+)
+```
+
+In this case, no further configuration or consideration is needed for the query to work, since MongoDB actually accepts this dot notation as valid querying notation.
+
+
+
+##### Querying for null, empty, or non-existant values (MongoDB specific)
+
+Mongo is actually quite strict on querying for values that don't exist, are set to null, or are empty strings or empty arrays. The possible permutations of what is accepted and or not is definitely beyond the scope of this guide, and there are many of [resources](https://www.mongodb.com/docs/manual/tutorial/query-for-null-fields/) out there to correctly query for a certain set of conditions (including ChatGPT or Bard). But as a simple demonstration of the required considerations, consider the following POST data: 
+
+```ts
+const postData1 = {  name: "" }
+const postData2 = {  name: null }
+const postData3 = {  name: undefined }
+```
+
+The first two data would actually create a `name` field on the resulting database entry, one with an empty string `""`, and one with `null`. However, the third data would create an empty object, without the `name` field. However, querying with `{ query: { name: null } }` but in Mongo, it would return the 2nd and 3rd records. If we were to query using `{ query: { name: { $exists: true } } }`, it would return the 1st and 2nd record. 
+
+This section is less of an instruction and more of a warning: **Great care must be taken in how empty strings, arrays, null values, and non-existant fields are queries.** 
+
+
+
+> A very common query i find useful is for when I'm trying to find an optional boolean value that is "false". In the event that there exists records withou the field, a query `{ field: false }` will not return those records without any `field` field. I usually use the query `{ field: { $ne: true } }` to represent "false" in this context.

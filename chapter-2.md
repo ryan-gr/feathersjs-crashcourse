@@ -153,3 +153,6 @@ Do some research on other types in TypeBox. Some that are useful to understand a
 
 
 
+### Bonus Action (2)
+
+With a type of `Type.String()`, try posting data to that field with the value `""`. Is any validation error thrown? Why? How do we make it such that empty strings are disallowed? (Hint, the length of the string).
