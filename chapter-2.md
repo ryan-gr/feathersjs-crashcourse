@@ -90,7 +90,7 @@ By default, Feathers ignores any field marked as `undefined`, hence the above pa
 
 ```json
 {
-  "bankDetails": undefined
+  "bankDetails": null
 }
 ```
 
