@@ -56,7 +56,7 @@ In Feathers, we define the answer to these things in a `.schema.ts` file. In the
 | Main Model Schema (studentSchema) | Determines the data type that operations like `get` or `find` will return. I.e. "if I ask the service to describe a Student object, how will it look like?" |
 | Data Schema (studentDataSchema)   | Determines the data type that is accepted by `create` (i.e. a POST). Importantly, this describes **only** the data that the provided to Feathers, but might not be what is actually saved in the database. |
 | Patch Schema (studentPatchSchema) | Determines the data type accepted by a `patch`.              |
-| Query Schema (studentQuerySchema) | Determinesi the query parameters accepted by the service. Most often this is used during a `find`, but can be used in all other methods as well. |
+| Query Schema (studentQuerySchema) | Determines the query parameters accepted by the service. Most often this is used during a `find`, but can be used in all other methods as well. |
 
 
 
